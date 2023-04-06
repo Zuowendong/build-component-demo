@@ -1,0 +1,26 @@
+{
+  "name": "@demo/cli",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "bin": {
+    "demo-cli": "./lib/bin.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^10.0.0",
+    "fs-extra": "^11.1.1",
+    "vite": "^4.2.1",
+    "vue": "^3.2.47"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.1",
+    "@types/node": "^18.15.11"
+  }
+}

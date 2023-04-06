@@ -3,7 +3,11 @@ import { createSpinner } from "nanospinner";
 import { resolve } from "path";
 
 const CWD = process.cwd();
-const PKG_SHARED = resolve(CWD, "./packages/varlet-shared");
+
+const PKG_CLI = resolve(CWD, './packages/cli')
+export const buildCli = () => execa('pnpm', ['build'], { cwd: PKG_CLI })
+
+const PKG_SHARED = resolve(CWD, "./packages/shared");
 export const buildShared = () => execa("pnpm", ["build"], { cwd: PKG_SHARED });
 
 export async function runTask(taskName, task) {
@@ -19,6 +23,7 @@ export async function runTask(taskName, task) {
 
 export async function runTaskQueue() {
 	await runTask("shared", buildShared);
+	await runTask('cli', buildCli)
 }
 
 runTaskQueue();
