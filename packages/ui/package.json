@@ -10,7 +10,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@demo/cli": "workspace:*"
+    "@demo/cli": "workspace:*",
+    "sass": "^1.61.0"
   },
   "dependencies": {
     "vue": "^3.2.47"
