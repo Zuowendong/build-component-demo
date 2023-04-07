@@ -1,9 +1,24 @@
 import fse from "fs-extra";
 import { build } from "vite";
-import { resolve } from "path";
-import { SRC_DIR, ES_DIR, UMD_DIR, PUBLIC_DIR_INDEXES } from "../shared/constant.js";
+import { resolve, relative, extname } from "path";
+import glob from "glob";
+import { SRC_DIR, ES_DIR, UMD_DIR, PUBLIC_DIR_INDEXES, TYPES_DIR } from "../shared/constant.js";
+import { compileESEntry } from "./script.js";
+import less from "less";
 
-const { copy, ensureFileSync, readdir, removeSync, pathExistsSync, lstatSync } = fse;
+const { render } = less;
+
+const {
+	copy,
+	ensureFileSync,
+	readdir,
+	removeSync,
+	pathExistsSync,
+	lstatSync,
+	unlinkSync,
+	writeFileSync,
+	readFileSync,
+} = fse;
 
 export const isPublicDir = (dir: string): boolean =>
 	PUBLIC_DIR_INDEXES.some((index) => pathExistsSync(resolve(dir, index)));
@@ -14,9 +29,22 @@ export async function getPublicDirs(): Promise<string[]> {
 export const isDir = (file: string): boolean => pathExistsSync(file) && lstatSync(file).isDirectory();
 export const isDTS = (file: string): boolean => pathExistsSync(file) && file.endsWith(".d.ts");
 
+export function clearLessFiles(dir: string) {
+	const files = glob.sync(`${dir}/**/*.less`);
+	files.forEach(unlinkSync);
+}
+
+export function generateReference(moduleDir: string) {
+	writeFileSync(
+		resolve(moduleDir, "index.d.ts"),
+		`\
+export * from '${relative(moduleDir, TYPES_DIR)}'
+`
+	);
+}
+
 export async function compileModule() {
 	const dest = ES_DIR;
-	// 将ui/src复制到es文件夹下
 	await copy(SRC_DIR, dest);
 	const moduleDir: string[] = await readdir(dest);
 	await Promise.all(
@@ -26,6 +54,10 @@ export async function compileModule() {
 			return isDir(file) ? compileDir(file) : null;
 		})
 	);
+	const publicDirs = await getPublicDirs();
+	await compileESEntry(dest, publicDirs);
+	clearLessFiles(dest);
+	generateReference(dest);
 }
 
 export async function compileDir(dir: string) {
@@ -41,7 +73,21 @@ export async function compileDir(dir: string) {
 	);
 }
 
+export const isLess = (file: string): boolean => pathExistsSync(file) && extname(file) === ".less";
+export const replaceExt = (file: string, ext: string): string => file.replace(extname(file), ext);
+export const EMPTY_SPACE_RE = /[\s]+/g;
+export const EMPTY_LINE_RE = /[\n\r]*/g;
+export const clearEmptyLine = (s: string) => s.replace(EMPTY_LINE_RE, "").replace(EMPTY_SPACE_RE, " ");
+
+export async function compileLess(file: string) {
+	console.log(1111111, file);
+	const source = readFileSync(file, "utf-8");
+	const { css } = await render(source, { filename: file });
+	writeFileSync(replaceExt(file, ".css"), clearEmptyLine(css), "utf-8");
+}
+
 export async function compileFile(file: string) {
+	isLess(file) && (await compileLess(file));
 	isDir(file) && (await compileDir(file));
 }
 
@@ -62,7 +108,7 @@ export async function compileBundle() {
 		},
 		{
 			format: "umd",
-			fileName: `ui.js`,
+			fileName: `ui.umd.js`,
 			output: UMD_DIR,
 			emptyOutDir: true,
 		},
@@ -71,14 +117,13 @@ export async function compileBundle() {
 		const { fileName, output, format, emptyOutDir } = options;
 		build({
 			build: {
-				minify: format == "cjs" ? false : "esbuild",
 				emptyOutDir,
 				copyPublicDir: false,
 				lib: {
-					name: "ui",
+					name: "demo-ui",
 					formats: [format],
 					fileName: () => fileName,
-					entry: resolve(ES_DIR, "index.bundle.mjs"),
+					entry: resolve(SRC_DIR, "index.ts"),
 				},
 				rollupOptions: {
 					external: ["vue"],

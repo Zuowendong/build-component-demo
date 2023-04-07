@@ -1,6 +1,6 @@
 import { defineComponent } from "vue";
 import { buttonProps, type ButtonProps } from "./button-types";
-import "./button.scss";
+import "./button.less";
 
 export default defineComponent({
 	name: "WdButton",
